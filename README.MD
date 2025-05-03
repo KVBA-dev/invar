@@ -7,3 +7,4 @@ Invar aims to simplify game development in Odin by implementing a lot of useful 
 - Easy CBOR file support
 - Rebindable keybinds
 - UDP networking for realtime games
+- Simple UI elements, such as buttons, sliders, and checkboxes
