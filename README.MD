@@ -3,11 +3,17 @@ A bare-bones game framework based on raylib for Odin
 
 ---
 
+**IMPORTANT NOTE:** This project is still very new, a lot of features are untested, incomplete, or straight-up missing. The API might and probably will feature breaking changes.
+
+Please, if you spot a bug, create an issue. Or if want to contribute, you're more than welcome to do it! 
+
+---
+
 Invar aims to simplify game development in Odin by implementing a lot of useful features, including:
-- Easy CBOR file support
+- Easy CBOR file support (e.g. for data serialisation)
 - Scene system
 - Rebindable keybinds
-- UDP networking for realtime games w/ server-side
+- UDP networking for realtime games w/ separate server-side
 - Simple UI elements, such as buttons, sliders, and checkboxes
 
 Invar aims to provide a simple structure to your game while leaving you able to control
