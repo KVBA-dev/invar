@@ -3,13 +3,7 @@ package invar
 import "core:fmt"
 import rl "vendor:raylib"
 
-WINDOW_WIDTH :: 1024
-WINDOW_HEIGHT :: 768
-
-bg := rl.WHITE
-
 main_client :: proc() {
-	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "invar")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
 

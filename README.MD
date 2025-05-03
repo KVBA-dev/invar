@@ -27,7 +27,7 @@ import iv "invar"
 import rl "vendor:raylib"
 
 main :: proc() {
-	iv.init()
+	iv.init(1280, 1024)
 	iv.set_scene({new(GameData), game_init, game_update, game_cleanup})
 	iv.run()
 }

@@ -9,9 +9,12 @@ import "core:math"
 import iv "invar"
 import rl "vendor:raylib" // Invar is based on raylib, so you're gonna need it
 
+WINDOW_WIDTH :: 1024
+WINDOW_HEIGHT :: 768
+
 main :: proc() {
 	// Initialise
-	iv.init()
+	iv.init(WINDOW_WIDTH, WINDOW_HEIGHT)
 
 	// Set initial scene
 	// Every scene needs a pointer to data and 3 procedures: init, update and cleanup
