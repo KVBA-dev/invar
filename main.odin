@@ -7,29 +7,32 @@ package main
 
 import "core:math"
 
-import "core:fmt"// Invar is based on raylib, so you're gonna need it
+import "core:fmt"
 import "core:mem"
 import iv "invar"
-import rl "vendor:raylib"
+import rl "vendor:raylib" // Invar is based on raylib, so you're gonna need this
 
 WINDOW_WIDTH :: 1024
 WINDOW_HEIGHT :: 768
 
 main :: proc() {
-	talloc := mem.Tracking_Allocator{}
-	mem.tracking_allocator_init(&talloc, context.allocator)
-	context.allocator = mem.tracking_allocator(&talloc)
-	defer {
-		if len(talloc.allocation_map) > 0 {
-			fmt.eprintfln("===== Allocations not freed: %v =====", len(talloc.allocation_map))
-			for _, entry in talloc.allocation_map {
-				fmt.eprintfln(" - %v bytes at %v", entry.size, entry.location)
+	// Tracking allocator for debugging
+	when ODIN_DEBUG {
+		talloc := mem.Tracking_Allocator{}
+		mem.tracking_allocator_init(&talloc, context.allocator)
+		context.allocator = mem.tracking_allocator(&talloc)
+		defer {
+			if len(talloc.allocation_map) > 0 {
+				fmt.eprintfln("===== Allocations not freed: %v =====", len(talloc.allocation_map))
+				for _, entry in talloc.allocation_map {
+					fmt.eprintfln(" - %v bytes at %v", entry.size, entry.location)
+				}
 			}
-		}
-		if len(talloc.bad_free_array) > 0 {
-			fmt.eprintfln("===== Bad frees: %v =====", len(talloc.bad_free_array))
-			for entry in talloc.bad_free_array {
-				fmt.eprintfln(" = %p at @%v", entry.memory, entry.location)
+			if len(talloc.bad_free_array) > 0 {
+				fmt.eprintfln("===== Bad frees: %v =====", len(talloc.bad_free_array))
+				for entry in talloc.bad_free_array {
+					fmt.eprintfln(" = %p at @%v", entry.memory, entry.location)
+				}
 			}
 		}
 	}
@@ -41,6 +44,7 @@ main :: proc() {
 	// Every scene needs a pointer to data and 3 procedures: init, update and cleanup
 	// Remember to free the data in cleanup!
 	iv.set_scene({new(GameCtx), game_init, game_update, game_cleanup})
+	iv.register_input_key(.Q)
 
 	// Run the game!
 	iv.run()
@@ -81,10 +85,12 @@ game_update :: proc(data: rawptr) {
 		if iv.Button(&btn_test) {
 			bg = rl.ColorFromHSV(cast(f32)iv.Time.time * 90, .5, 1)
 			iv.push_scene({new(Game2Ctx), game2_init, game2_update, game2_cleanup})
+			return
 		}
 
 		if iv.Checkbox(&chk_test) {}
 
+		iv.slider_val(&sld_test3, .5)
 		iv.Slider(&sld_test)
 		iv.Slider(&sld_test2)
 		iv.Slider(&sld_test3)
@@ -116,8 +122,11 @@ game2_update :: proc(data: rawptr) {
 	{
 		rl.ClearBackground(bg)
 
-		if rl.IsKeyPressed(.Q) {
+		rl.DrawText("Press Q to go back!", 100, 100, 50, rl.WHITE)
+
+		if iv.Input.keyboard[.Q].pressed {
 			iv.pop_scene()
+			return
 		}
 
 	}
