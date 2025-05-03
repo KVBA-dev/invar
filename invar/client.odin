@@ -14,4 +14,6 @@ main_client :: proc() {
 	}
 
 	SceneManager.current.cleanup(SceneManager.current.data)
+	delete_scene_manager()
+	delete_input()
 }

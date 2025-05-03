@@ -6,13 +6,34 @@
 package main
 
 import "core:math"
+
+import "core:fmt"// Invar is based on raylib, so you're gonna need it
+import "core:mem"
 import iv "invar"
-import rl "vendor:raylib" // Invar is based on raylib, so you're gonna need it
+import rl "vendor:raylib"
 
 WINDOW_WIDTH :: 1024
 WINDOW_HEIGHT :: 768
 
 main :: proc() {
+	talloc := mem.Tracking_Allocator{}
+	mem.tracking_allocator_init(&talloc, context.allocator)
+	context.allocator = mem.tracking_allocator(&talloc)
+	defer {
+		if len(talloc.allocation_map) > 0 {
+			fmt.eprintfln("===== Allocations not freed: %v =====", len(talloc.allocation_map))
+			for _, entry in talloc.allocation_map {
+				fmt.eprintfln(" - %v bytes at %v", entry.size, entry.location)
+			}
+		}
+		if len(talloc.bad_free_array) > 0 {
+			fmt.eprintfln("===== Bad frees: %v =====", len(talloc.bad_free_array))
+			for entry in talloc.bad_free_array {
+				fmt.eprintfln(" = %p at @%v", entry.memory, entry.location)
+			}
+		}
+	}
+
 	// Initialise
 	iv.init(WINDOW_WIDTH, WINDOW_HEIGHT)
 
@@ -23,6 +44,7 @@ main :: proc() {
 
 	// Run the game!
 	iv.run()
+
 }
 
 GameCtx :: struct {
@@ -58,7 +80,7 @@ game_update :: proc(data: rawptr) {
 		rl.DrawText("Hello, world!", 20, 20, 20, rl.RED)
 		if iv.Button(&btn_test) {
 			bg = rl.ColorFromHSV(cast(f32)iv.Time.time * 90, .5, 1)
-			iv.set_scene({new(Game2Ctx), game2_init, game2_update, game2_cleanup})
+			iv.push_scene({new(Game2Ctx), game2_init, game2_update, game2_cleanup})
 		}
 
 		if iv.Checkbox(&chk_test) {}
@@ -85,7 +107,6 @@ game2_init :: proc(data: rawptr) {
 	using data := cast(^Game2Ctx)data
 	bg = rl.RED
 
-	iv.
 }
 
 game2_update :: proc(data: rawptr) {
@@ -95,6 +116,9 @@ game2_update :: proc(data: rawptr) {
 	{
 		rl.ClearBackground(bg)
 
+		if rl.IsKeyPressed(.Q) {
+			iv.pop_scene()
+		}
 
 	}
 	rl.EndDrawing()

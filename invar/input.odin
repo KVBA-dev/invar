@@ -42,6 +42,11 @@ register_input_key :: proc(key: rl.KeyboardKey) {
 	Input.keyboard[key] = KeyState{}
 }
 
+delete_input :: proc() {
+	delete(Input.actions)
+	delete(Input.keyboard)
+}
+
 rebind_key :: proc(from, to: rl.KeyboardKey) -> ^KeyState {
 	if elem, ok := Input.keyboard[from]; ok {
 		delete_key(&Input.keyboard, from)

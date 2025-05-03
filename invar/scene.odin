@@ -1,5 +1,7 @@
 package invar
 
+import "core:fmt"
+
 Scene :: struct {
 	data:    rawptr,
 	init:    proc(data: rawptr),
@@ -14,7 +16,7 @@ _SceneManager :: struct {
 }
 
 SceneManager := _SceneManager {
-	backlog  = make([dynamic]Scene, 16),
+	backlog  = make([dynamic]Scene, 0, 16),
 	hasScene = false,
 }
 
@@ -44,5 +46,14 @@ pop_scene :: proc() -> Scene {
 }
 
 delete_scene_manager :: proc() {
+	if len(SceneManager.backlog) > 0 {
+		top_idx := len(SceneManager.backlog) - 1
+		for top_idx >= 0 {
+			curr := &SceneManager.backlog[top_idx]
+			curr.cleanup(curr.data)
+			curr.data = nil
+			top_idx -= 1
+		}
+	}
 	delete(SceneManager.backlog)
 }
