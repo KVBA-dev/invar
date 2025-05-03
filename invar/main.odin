@@ -1,10 +1,11 @@
 package invar
 
+import "core:strings"
 import rl "vendor:raylib"
 
-
 init :: proc(w, h: i32, window_name: string = "invar", flags: rl.ConfigFlags = {}, fps: i32 = 60) {
-	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "invar")
+	namec := strings.clone_to_cstring(window_name, context.temp_allocator)
+	rl.InitWindow(w, h, namec)
 	rl.SetWindowState(flags)
 	rl.SetTargetFPS(fps)
 }
