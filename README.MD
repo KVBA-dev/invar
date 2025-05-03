@@ -23,7 +23,7 @@ however it tries to be as transparent and inobtrusive as possible.
 ```odin
 package main
 
-import "invar"
+import iv "invar"
 import rl "vendor:raylib"
 
 main :: proc() {
