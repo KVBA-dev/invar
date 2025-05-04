@@ -3,6 +3,7 @@ package invar
 import "core:fmt"
 import "core:net"
 import "core:thread"
+import "vendor:raylib"
 
 init_client :: proc() -> ^Client {
 	socket, err := net.make_unbound_udp_socket(.IP4)

@@ -105,3 +105,17 @@ recv_message :: proc(
 
 	return
 }
+
+broadcast_message :: proc(server: ^Server, type: MessageType, data: []u8) -> net.Network_Error {
+	err: net.Network_Error
+	to_send := make([]u8, len(data) + 1)
+	defer delete(to_send)
+	for e, i in data {
+		to_send[i] = data[i]
+	}
+	to_send[len(data)] = cast(u8)type
+	for ci in server.clients {
+		net.send_udp(server.socket, to_send, ci.remote) or_return
+	}
+	return nil
+}
