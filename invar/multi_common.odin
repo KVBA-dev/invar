@@ -1,46 +1,26 @@
 package invar
 
-import "core:container/queue"
 import "core:net"
+import "core:slice"
 
-buf := [1024]u8{}
-
-DEFAULT_PORT :: 38124
-
-Payload :: union {
-	InputMessage,
-	GameStateMessage,
-}
-
-// TODO: fill your own input messages there
-InputMessage :: struct {}
-
-// TODO: fill your own game state messages there
-GameStateMessage :: struct {}
+EmptyData := []u8{}
 
 MessageType :: enum u8 {
-	Disconnect = 0,
-	Connection_Request,
-	Connection_Accept,
-	Connection_Reject,
-	Input,
-	GameUpdate,
-}
-
-MessageHeader :: struct {
-	timestamp: f64,
-	type:      MessageType,
+	ConnectionRequest,
+	ConnectionAccepted,
+	ConnectionRejected,
+	Disconnect,
+	Data,
 }
 
 Message :: struct {
-	header: MessageHeader,
-	body:   Payload,
-	id:     u32,
+	type: MessageType,
+	data: []u8,
 }
 
 Server :: struct {
-	socket:  net.UDP_Socket,
 	clients: []ClientInfo,
+	socket:  net.UDP_Socket,
 }
 
 ClientInfo :: struct {
@@ -50,9 +30,78 @@ ClientInfo :: struct {
 }
 
 Client :: struct {
-	server_remote: net.Endpoint,
-	socket:        net.UDP_Socket,
-	id:            u32,
-	incomingQueue: queue.Queue(MessageType),
-	outgoingQueue: queue.Queue(MessageType),
+	socket: net.UDP_Socket,
+	id:     u32,
+}
+
+_NetworkManager :: struct {
+	server_address:            net.Endpoint,
+	server_proc:               proc(server: ^Server, remote: net.Endpoint, data: []u8),
+	server_disconnect_handler: proc(server: ^Server, remote: net.Endpoint),
+	server_connection_handler: proc(server: ^Server, remote: net.Endpoint),
+	client_proc:               proc(client: ^Client, data: []u8),
+	curr_client:               ^Client,
+	enabled:                   bool,
+}
+
+NetworkManager := _NetworkManager {
+	enabled                   = false,
+	server_disconnect_handler = default_disconnect_handler,
+	server_connection_handler = default_connection_handler,
+}
+
+enable_udp :: proc(server_endpoint: net.Endpoint) {
+	NetworkManager.enabled = true
+	NetworkManager.server_address = server_endpoint
+}
+
+set_server_proc :: proc(p: proc(server: ^Server, remote: net.Endpoint, data: []u8)) {
+	NetworkManager.server_proc = p
+}
+
+set_client_proc :: proc(p: proc(_: ^Client, data: []u8)) {
+	NetworkManager.client_proc = p
+}
+
+get_current_client :: proc() -> ^Client {
+	return NetworkManager.curr_client
+}
+
+send_message :: proc(
+	socket: net.UDP_Socket,
+	to: net.Endpoint,
+	type: MessageType,
+	data: []u8,
+) -> (
+	numbytes: int,
+	err: net.Network_Error,
+) {
+	to_send := make([]u8, len(data) + 1)
+	defer delete(to_send)
+	for e, i in data {
+		to_send[i] = data[i]
+	}
+	to_send[len(data)] = cast(u8)type
+	return net.send_udp(socket, to_send, to)
+}
+
+recv_message :: proc(
+	socket: net.UDP_Socket,
+	buf: []u8,
+) -> (
+	msg: Message,
+	remote: net.Endpoint,
+	err: net.Network_Error,
+) {
+	numbytes: int
+	numbytes, _, err = net.recv_udp(socket, buf[:])
+
+	type := cast(MessageType)buf[numbytes - 1]
+
+	msg = {
+		type = type,
+		data = buf[:numbytes - 1],
+	}
+
+	return
 }

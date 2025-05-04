@@ -4,11 +4,10 @@ import "core:fmt"
 import "core:mem"
 import "core:net"
 
-
-init_server :: proc(port: u16, numclients: int) -> ^Server {
-	socket, err := net.make_bound_udp_socket(net.IP4_Address{127, 0, 0, 1}, int(port))
+init_server :: proc(endpoint: net.Endpoint, numclients: int = 8) -> ^Server {
+	socket, err := net.make_bound_udp_socket(endpoint.address, endpoint.port)
 	if err != nil {
-		fmt.println("error on server creation:", err)
+		fmt.eprintln("error on server creation:", err)
 		return nil
 	}
 
@@ -22,126 +21,67 @@ init_server :: proc(port: u16, numclients: int) -> ^Server {
 		i += 1
 	}
 
-	fmt.println("server running on port", port)
+	fmt.println("server running on port", endpoint.port)
 	return server
 }
 
 update_server :: proc(server: ^Server) {
+	buf := [1024]u8{}
 	for {
-		bytes, remote, err := net.recv_udp(server.socket, buf[:])
+		msg, remote, err := recv_message(server.socket, buf[:])
 		if err != nil {
-			fmt.println("error:", err)
+			fmt.eprintln("error on receive data:", err)
 			return
 		}
-
-		msg := cast(^Message)raw_data(buf[:bytes])
-
-		#partial switch msg.header.type {
+		#partial switch msg.type {
+		case .ConnectionRequest:
+			NetworkManager.server_connection_handler(server, remote)
 		case .Disconnect:
-			handle_disconnect(server, remote)
-
-		case .Connection_Request:
-			handle_new_connection(server, remote)
-
-		case .Input:
-			body, ok := msg.body.(InputMessage)
-			assert(ok, "invalid input message body")
-			handle_input(server, remote, body)
-
+			NetworkManager.server_disconnect_handler(server, remote)
+		case .Data:
+			NetworkManager.server_proc(server, remote, msg.data)
+		case .ConnectionAccepted:
+			fallthrough
+		case .ConnectionRejected:
+			fmt.eprintln("invalid message type:", msg.type)
 		}
 	}
-}
-
-find_client_by_endpoint :: proc(server: ^Server, remote: net.Endpoint) -> ^ClientInfo {
-	for &c in server.clients {
-		if c.remote == remote {
-			return &c
-		}
-	}
-	return nil
 }
 
 destroy_server :: proc(server: ^Server) {
-	msg := Message {
-		header = MessageHeader{type = .Disconnect, timestamp = Time.time},
-		body = nil,
-	}
-	for &c in server.clients {
-		if !c.connected do continue
-		msg.id = c.id
-		bytes := mem.byte_slice(&msg, size_of(msg))
-		net.send_udp(server.socket, bytes, c.remote)
-	}
+	delete(server.clients)
 	net.close(server.socket)
 	free(server)
-	fmt.println("server shut down")
 }
 
-get_connected_clients_count :: proc(server: ^Server) -> int {
-	i := 0
-	for c in server.clients {
-		if c.connected do i += 1
-	}
-	return i
+server_echo :: proc(server: ^Server, remote: net.Endpoint, data: []u8) {
+	net.send_udp(server.socket, data, remote)
 }
 
-handle_disconnect :: proc(server: ^Server, remote: net.Endpoint) {
-	client := find_client_by_endpoint(server, remote)
-	if client == nil do return
-
-	client.connected = false
-	fmt.println("client", client.id, "disconnected")
-}
-
-handle_new_connection :: proc(server: ^Server, remote: net.Endpoint) {
-	client := find_client_by_endpoint(server, remote)
-	if client != nil {
-		// client is already connected, just ack
-		send_connection_response(server, client, true)
-		return
-	}
-	for &c in server.clients {
-		if !c.connected {
-			client = &c
-			break
+default_connection_handler :: proc(server: ^Server, remote: net.Endpoint) {
+	buf := [4]u8{}
+	for &ci, i in server.clients {
+		if ci.remote == remote || !ci.connected {
+			ci.connected = true
+			ci.remote = remote
+			buf[0] = cast(u8)(ci.id & 0xFF)
+			buf[1] = cast(u8)(ci.id >> 8 & 0xFF)
+			buf[2] = cast(u8)(ci.id >> 16 & 0xFF)
+			buf[3] = cast(u8)(ci.id >> 24 & 0xFF)
+			send_message(server.socket, remote, .ConnectionAccepted, buf[:])
+			return
 		}
 	}
-	if client == nil {
-		// server full
-		tempClient := ClientInfo {
-			remote = remote,
+
+	send_message(server.socket, remote, .ConnectionRejected, EmptyData)
+}
+
+default_disconnect_handler :: proc(server: ^Server, remote: net.Endpoint) {
+	for &ci, i in server.clients {
+		if ci.remote == remote {
+			ci.connected = false
+			ci.remote = {}
+			return
 		}
-		send_connection_response(server, &tempClient, false)
-		return
 	}
-
-	client.remote = remote
-	client.connected = true
-	// accept connection
-	send_connection_response(server, client, true)
-
-	fmt.println("client connected from", remote, "with id", client.id)
-}
-
-send_connection_response :: proc(server: ^Server, client: ^ClientInfo, accept: bool) {
-	msg := Message {
-		header = MessageHeader {
-			type = .Connection_Accept if accept else .Connection_Reject,
-			timestamp = Time.time,
-		},
-		body = nil,
-		id = client.id if accept else ~u32(0),
-	}
-
-	bytes := mem.byte_slice(&msg, size_of(Message))
-
-	numbytes, err := net.send_udp(server.socket, bytes, client.remote)
-	if err != nil {
-		fmt.println("error on sending connection response to", client.remote, ":", err)
-		return
-	}
-}
-
-handle_input :: proc(server: ^Server, remote: net.Endpoint, input: InputMessage) {
-	// TODO: fill your own input handling here
 }

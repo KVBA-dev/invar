@@ -5,7 +5,7 @@ import "core:os"
 import "core:thread"
 
 main_server :: proc() {
-	server := init_server(DEFAULT_PORT, 4)
+	server := init_server(NetworkManager.server_address)
 	defer destroy_server(server)
 	fmt.printfln("press enter to shut down")
 
