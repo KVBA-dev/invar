@@ -29,6 +29,7 @@ client_connect :: proc(client: ^Client) -> bool {
 		NetworkManager.server_address,
 		.ConnectionRequest,
 		EmptyData,
+		buf[:],
 	)
 	if err != nil do return false
 
@@ -50,7 +51,8 @@ client_connect :: proc(client: ^Client) -> bool {
 }
 
 disconnect :: proc(client: ^Client) {
-	send_message(client.socket, NetworkManager.server_address, .Disconnect, nil)
+	buf := [8]u8{}
+	send_message(client.socket, NetworkManager.server_address, .Disconnect, nil, buf[:])
 }
 
 start_client_thread :: proc(client: ^Client) {

@@ -38,7 +38,7 @@ _NetworkManager :: struct {
 	server_address:            net.Endpoint,
 	server_proc:               proc(server: ^Server, remote: net.Endpoint, data: []u8),
 	server_disconnect_handler: proc(server: ^Server, remote: net.Endpoint),
-	server_connection_handler: proc(server: ^Server, remote: net.Endpoint),
+	server_connection_handler: proc(server: ^Server, remote: net.Endpoint, buf: []u8),
 	client_proc:               proc(client: ^Client, data: []u8),
 	curr_client:               ^Client,
 	enabled:                   bool,
@@ -72,12 +72,12 @@ send_message :: proc(
 	to: net.Endpoint,
 	type: MessageType,
 	data: []u8,
+	buf: []u8,
 ) -> (
 	numbytes: int,
 	err: net.Network_Error,
 ) {
-	to_send := make([]u8, len(data) + 1)
-	defer delete(to_send)
+	to_send := buf[:len(data) + 1]
 	for e, i in data {
 		to_send[i] = data[i]
 	}
@@ -106,10 +106,14 @@ recv_message :: proc(
 	return
 }
 
-broadcast_message :: proc(server: ^Server, type: MessageType, data: []u8) -> net.Network_Error {
+broadcast_message :: proc(
+	server: ^Server,
+	type: MessageType,
+	data: []u8,
+	buf: []u8,
+) -> net.Network_Error {
 	err: net.Network_Error
-	to_send := make([]u8, len(data) + 1)
-	defer delete(to_send)
+	to_send := buf[:len(data) + 1]
 	for e, i in data {
 		to_send[i] = data[i]
 	}

@@ -35,7 +35,7 @@ update_server :: proc(server: ^Server) {
 		}
 		#partial switch msg.type {
 		case .ConnectionRequest:
-			NetworkManager.server_connection_handler(server, remote)
+			NetworkManager.server_connection_handler(server, remote, buf[:])
 		case .Disconnect:
 			NetworkManager.server_disconnect_handler(server, remote)
 		case .Data:
@@ -58,22 +58,22 @@ server_echo :: proc(server: ^Server, remote: net.Endpoint, data: []u8) {
 	net.send_udp(server.socket, data, remote)
 }
 
-default_connection_handler :: proc(server: ^Server, remote: net.Endpoint) {
-	buf := [4]u8{}
+default_connection_handler :: proc(server: ^Server, remote: net.Endpoint, buf: []u8) {
+	data := [4]u8{}
 	for &ci, i in server.clients {
 		if ci.remote == remote || !ci.connected {
 			ci.connected = true
 			ci.remote = remote
-			buf[0] = cast(u8)(ci.id & 0xFF)
-			buf[1] = cast(u8)(ci.id >> 8 & 0xFF)
-			buf[2] = cast(u8)(ci.id >> 16 & 0xFF)
-			buf[3] = cast(u8)(ci.id >> 24 & 0xFF)
-			send_message(server.socket, remote, .ConnectionAccepted, buf[:])
+			data[0] = cast(u8)(ci.id & 0xFF)
+			data[1] = cast(u8)(ci.id >> 8 & 0xFF)
+			data[2] = cast(u8)(ci.id >> 16 & 0xFF)
+			data[3] = cast(u8)(ci.id >> 24 & 0xFF)
+			send_message(server.socket, remote, .ConnectionAccepted, data[:], buf)
 			return
 		}
 	}
 
-	send_message(server.socket, remote, .ConnectionRejected, EmptyData)
+	send_message(server.socket, remote, .ConnectionRejected, EmptyData, buf)
 }
 
 default_disconnect_handler :: proc(server: ^Server, remote: net.Endpoint) {
