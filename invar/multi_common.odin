@@ -63,6 +63,15 @@ set_client_proc :: proc(p: proc(_: ^Client, data: []u8)) {
 	NetworkManager.client_proc = p
 }
 
+current_client :: proc {
+	set_current_client,
+	get_current_client,
+}
+
+set_current_client :: proc(client: ^Client) {
+	NetworkManager.curr_client = client
+}
+
 get_current_client :: proc() -> ^Client {
 	return NetworkManager.curr_client
 }
@@ -77,6 +86,7 @@ send_message :: proc(
 	numbytes: int,
 	err: net.Network_Error,
 ) {
+	assert(len(buf) >= len(data) + 1, "buffer too small")
 	to_send := buf[:len(data) + 1]
 	for e, i in data {
 		to_send[i] = data[i]
@@ -112,6 +122,9 @@ broadcast_message :: proc(
 	data: []u8,
 	buf: []u8,
 ) -> net.Network_Error {
+	assert(len(buf) >= len(data) + 1, "buffer too small")
+	assert(server != nil, "server not specified")
+
 	err: net.Network_Error
 	to_send := buf[:len(data) + 1]
 	for e, i in data {

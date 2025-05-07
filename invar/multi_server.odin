@@ -26,6 +26,7 @@ init_server :: proc(endpoint: net.Endpoint, numclients: int = 8) -> ^Server {
 }
 
 update_server :: proc(server: ^Server) {
+	assert(server != nil, "server not specified")
 	buf := [1024]u8{}
 	for {
 		msg, remote, err := recv_message(server.socket, buf[:])
@@ -59,6 +60,7 @@ server_echo :: proc(server: ^Server, remote: net.Endpoint, data: []u8) {
 }
 
 default_connection_handler :: proc(server: ^Server, remote: net.Endpoint, buf: []u8) {
+	assert(len(buf) >= 5, "buffer too small")
 	data := [4]u8{}
 	for &ci, i in server.clients {
 		if ci.remote == remote || !ci.connected {

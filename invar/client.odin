@@ -12,7 +12,7 @@ main_client :: proc() {
 
 	if NetworkManager.enabled {
 		client = init_client()
-		NetworkManager.curr_client = client
+		current_client(client)
 	}
 
 	for !rl.WindowShouldClose() {

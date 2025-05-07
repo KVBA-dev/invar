@@ -23,6 +23,7 @@ destroy_client :: proc(client: ^Client) {
 }
 
 client_connect :: proc(client: ^Client) -> bool {
+	assert(client != nil, "client not specified")
 	buf := [1024]u8{}
 	numbytes, err := send_message(
 		client.socket,
@@ -60,6 +61,7 @@ start_client_thread :: proc(client: ^Client) {
 }
 
 client_thread :: proc(client: ^Client) {
+	assert(client != nil, "client not specified")
 	buf := [1024]u8{}
 	for {
 		msg, _, err := recv_message(client.socket, buf[:])
